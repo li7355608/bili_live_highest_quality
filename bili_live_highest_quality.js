@@ -3,7 +3,7 @@
 // @description  自动切换直播间画质为最高画质。
 // @match        https://live.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      1.1
+// @version      1.3
 // @license      MIT
 // ==/UserScript==
 
@@ -109,23 +109,13 @@
         return;
     }
 
-    // 获取视频源的初始路径名和最高画质编号（添加错误处理）
-    let initialPathname = null;
+    // 获取最高画质编号（添加错误处理）
     let highestQualityNumber = null;
 
     try {
         const playerInfo = unsafeWindow.livePlayer.getPlayerInfo();
         if (!playerInfo || !playerInfo.playurl) {
             throw new Error('无法获取播放器信息');
-        }
-
-        // 安全解析URL
-        try {
-            initialPathname = new URL(playerInfo.playurl).pathname;
-        } catch (urlError) {
-            // 如果playurl不是完整URL，尝试其他方式解析
-            consoleStyle.warning(`URL解析失败，使用原始路径: ${playerInfo.playurl}`);
-            initialPathname = playerInfo.playurl;
         }
 
         // 检查画质候选列表
