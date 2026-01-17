@@ -58,6 +58,8 @@
             }
         }, 1000);
         timers.push(redirectTimer);
+    }else {
+        consoleStyle.info('嵌套页面自动跳转功能未启用，取消跳转');
     }
 
     // 隐藏加载动画
