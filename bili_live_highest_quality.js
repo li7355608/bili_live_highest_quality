@@ -10,6 +10,26 @@
 (async function() {
     'use strict';
 
+    // 控制台样式化输出工具
+    const consoleStyle = {
+        // 成功类型：绿色渐变
+        success: function(message) {
+            console.log(`%c✅ ${message}`, 'color: #fff; background: linear-gradient(270deg, #986fee, #8695e6, #68b7dd, #18d7d3); padding: 8px 15px; border-radius: 0 15px 0 15px; font-weight: bold;');
+        },
+        // 错误类型：红色渐变
+        error: function(message) {
+            console.log(`%c❌ ${message}`, 'color: #fff; background: linear-gradient(270deg, #ff6b6b, #ff8e8e, #ffa5a5); padding: 8px 15px; border-radius: 0 15px 0 15px; font-weight: bold;');
+        },
+        // 警告类型：橙色渐变
+        warning: function(message) {
+            console.log(`%c⚠️ ${message}`, 'color: #fff; background: linear-gradient(270deg, #ff9800, #ffb84d, #ffcc80); padding: 8px 15px; border-radius: 0 15px 0 15px; font-weight: bold;');
+        },
+        // 信息类型：蓝色渐变
+        info: function(message) {
+            console.log(`%cℹ️ ${message}`, 'color: #fff; background: linear-gradient(270deg, #2196f3, #64b5f6, #90caf9); padding: 8px 15px; border-radius: 0 15px 0 15px; font-weight: bold;');
+        }
+    };
+
     // 保存定时器引用以便清理
     const timers = [];
 
@@ -28,7 +48,7 @@
                 unsafeWindow.location.href = nestedPage.src;
             }
         } catch (error) {
-            console.error('重定向检查出错:', error);
+            consoleStyle.error(`重定向检查出错: ${error.message || error}`);
             clearInterval(redirectTimer);
         }
     }, 1000);
@@ -67,7 +87,7 @@
                         }
                     }
                 } catch (error) {
-                    console.error('检查播放器状态出错:', error);
+                    consoleStyle.error(`检查播放器状态出错: ${error.message || error}`);
                 }
 
                 if (attempts >= maxAttempts) {
@@ -78,7 +98,7 @@
             timers.push(timer);
         });
     } catch (error) {
-        console.error('播放器初始化失败:', error);
+        consoleStyle.error(`播放器初始化失败: ${error.message || error}`);
         // 清理所有定时器
         timers.forEach(timer => clearInterval(timer));
         return;
@@ -104,7 +124,7 @@
             initialPathname = new URL(playerInfo.playurl).pathname;
         } catch (urlError) {
             // 如果playurl不是完整URL，尝试其他方式解析
-            console.warn('URL解析失败，使用原始路径:', playerInfo.playurl);
+            consoleStyle.warning(`URL解析失败，使用原始路径: ${playerInfo.playurl}`);
             initialPathname = playerInfo.playurl;
         }
 
@@ -121,15 +141,25 @@
             throw new Error('无法获取最高画质编号');
         }
 
-        console.log('已获取最高画质:', highestQualityNumber);
+        consoleStyle.success(`已获取最高画质: ${highestQualityNumber}`);
     } catch (error) {
-        console.error('获取画质信息失败:', error);
+        consoleStyle.error(`获取画质信息失败: ${error.message || error}`);
         timers.forEach(timer => clearInterval(timer));
         return;
     }
 
-    // 切换画质
+    // 清理所有资源的函数
+    function cleanup() {
+        timers.forEach(timer => clearInterval(timer));
+        timers.length = 0;
+        consoleStyle.success('画质切换完成，脚本已自动卸载');
+    }
+
+    // 切换画质，完成后自动卸载
     let isSwitching = false;
+    let stableCount = 0; // 连续稳定检测次数
+    const requiredStableChecks = 5; // 需要连续5次检测到最高画质才认为稳定
+
     const qualitySwitchTimer = setInterval(() => {
         try {
             if (isSwitching) return; // 防止重复切换
@@ -139,8 +169,18 @@
 
             const currentQualityNumber = playerInfo.quality;
 
-            // 如果当前画质不是最高画质，则切换
-            if (currentQualityNumber !== highestQualityNumber) {
+            // 如果当前画质已经是最高画质
+            if (currentQualityNumber === highestQualityNumber) {
+                stableCount++;
+                // 连续检测到最高画质达到要求次数，认为切换成功并稳定
+                if (stableCount >= requiredStableChecks) {
+                    clearInterval(qualitySwitchTimer);
+                    cleanup();
+                    return;
+                }
+            } else {
+                // 如果当前画质不是最高画质，则切换
+                stableCount = 0; // 重置稳定计数
                 isSwitching = true;
                 unsafeWindow.livePlayer.switchQuality(highestQualityNumber);
 
@@ -150,7 +190,7 @@
                 }, 2000);
             }
         } catch (error) {
-            console.error('切换画质出错:', error);
+            consoleStyle.error(`切换画质出错: ${error.message || error}`);
             isSwitching = false;
         }
     }, 1000);
@@ -158,7 +198,7 @@
 
     // 页面卸载时清理定时器
     window.addEventListener('beforeunload', () => {
-        timers.forEach(timer => clearInterval(timer));
+        cleanup();
     });
 
 })();
