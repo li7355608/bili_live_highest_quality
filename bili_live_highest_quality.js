@@ -3,7 +3,7 @@
 // @description  自动切换直播间画质为最高画质。
 // @match        https://live.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      1.3
+// @version      1.4
 // @license      MIT
 // ==/UserScript==
 
@@ -30,29 +30,35 @@
         }
     };
 
+    // 全局控制变量：嵌套页面自动跳转功能，默认关闭
+    // 如需开启，将 ENABLE_NESTED_REDIRECT 设置为 true
+    const ENABLE_NESTED_REDIRECT = false;
+
     // 保存定时器引用以便清理
     const timers = [];
 
-    // 如果直播流是嵌套的，跳转到实际房间
-    let hasRedirected = false;
-    const redirectTimer = setInterval(() => {
-        try {
-            if (hasRedirected) {
+    // 如果直播间嵌套的，跳转到实际房间，需要开启功能才会执行
+    if (ENABLE_NESTED_REDIRECT) {
+        let hasRedirected = false;
+        const redirectTimer = setInterval(() => {
+            try {
+                if (hasRedirected) {
+                    clearInterval(redirectTimer);
+                    return;
+                }
+                const nestedPage = document.querySelector('iframe[src*=blanc]');
+                if (nestedPage && nestedPage.src) {
+                    hasRedirected = true;
+                    clearInterval(redirectTimer);
+                    unsafeWindow.location.href = nestedPage.src;
+                }
+            } catch (error) {
+                consoleStyle.error(`重定向检查出错: ${error.message || error}`);
                 clearInterval(redirectTimer);
-                return;
             }
-            const nestedPage = document.querySelector('iframe[src*=blanc]');
-            if (nestedPage && nestedPage.src) {
-                hasRedirected = true;
-                clearInterval(redirectTimer);
-                unsafeWindow.location.href = nestedPage.src;
-            }
-        } catch (error) {
-            consoleStyle.error(`重定向检查出错: ${error.message || error}`);
-            clearInterval(redirectTimer);
-        }
-    }, 1000);
-    timers.push(redirectTimer);
+        }, 1000);
+        timers.push(redirectTimer);
+    }
 
     // 隐藏加载动画
     const styleElement = document.createElement('style');
